@@ -1,0 +1,47 @@
+#!/bin/sh
+set -eu
+
+# Log this invocation's output to a state file for debugging menu launches
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/spotify-podman"
+mkdir -p "$LOG_DIR"
+exec >>"$LOG_DIR/launch.log" 2>&1
+echo "--- $(date -Iseconds) launching, args: $* ---"
+
+: "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR not set}"
+
+# Auto-detect Wayland socket if not in env (desktop launchers strip it)
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    for sock in "${XDG_RUNTIME_DIR}"/wayland-*; do
+        [ -S "$sock" ] || continue
+        WAYLAND_DISPLAY="$(basename "$sock")"
+        break
+    done
+    : "${WAYLAND_DISPLAY:?No Wayland socket found in $XDG_RUNTIME_DIR}"
+fi
+
+UID_NUM="$(id -u)"
+
+if podman container exists spotify 2>/dev/null && \
+   [ "$(podman inspect -f '{{.State.Running}}' spotify)" = "true" ]; then
+    exec podman exec spotify /usr/local/bin/spotify-wayland "$@"
+fi
+
+podman rm -f spotify 2>/dev/null || true
+
+exec podman run --rm -d \
+    --name spotify \
+    --userns="keep-id:uid=${UID_NUM},gid=${UID_NUM}" \
+    --security-opt label=disable \
+    -e "XDG_RUNTIME_DIR=/run/user/${UID_NUM}" \
+    -e "WAYLAND_DISPLAY=${WAYLAND_DISPLAY}" \
+    -e PIPEWIRE_REMOTE=pipewire-0 \
+    -e "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${UID_NUM}/bus" \
+    -e QT_QPA_PLATFORM=wayland \
+    -e GDK_BACKEND=wayland \
+    -v "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/run/user/${UID_NUM}/${WAYLAND_DISPLAY}" \
+    -v "${XDG_RUNTIME_DIR}/pipewire-0:/run/user/${UID_NUM}/pipewire-0" \
+    -v "${XDG_RUNTIME_DIR}/bus:/run/user/${UID_NUM}/bus" \
+    -v spotify-config:/home/spotify/.config \
+    -v spotify-cache:/home/spotify/.cache \
+    --device /dev/dri \
+    spotify "$@"

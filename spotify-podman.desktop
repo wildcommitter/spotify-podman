@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=Spotify
+GenericName=Music Player
+Comment=Spotify music player (containerized)
+Icon=spotify-client
+Exec=spotify-podman %U
+TryExec=spotify-podman
+Terminal=false
+Categories=Audio;Music;Player;AudioVideo;
+Keywords=music;audio;player;streaming;
+MimeType=x-scheme-handler/spotify;
+StartupNotify=true
+StartupWMClass=spotify
+Actions=Quit;
+
+[Desktop Action Quit]
+Name=Quit Spotify
+Exec=podman stop spotify
