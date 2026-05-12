@@ -106,6 +106,19 @@ The `spotify-wayland` wrapper in the `Containerfile` passes `--no-sandbox` to dr
 podman build -t spotify .
 ```
 
+### "A firewall might be blocking Spotify" at login
+
+On hosts without working IPv6, pasta will still give the container an IPv6 stack and DNS will return AAAA records. Spotify's Chromium resolver tries IPv6 first, hangs on the unreachable route, and surfaces the firewall banner at login before falling back to IPv4.
+
+The `spotify-podman` launcher passes `--network=pasta:--ipv4-only` plus `--sysctl net.ipv6.conf.{all,default}.disable_ipv6=1` to turn IPv6 off both at the pasta layer (no v6 routes installed) and at the kernel layer (`EAFNOSUPPORT` on any v6 socket call). AAAA records stop being returned and Spotify goes straight to IPv4. If you've modified the launcher and the firewall banner is back, restore those flags.
+
+Quick sanity check from inside the container:
+
+```bash
+podman exec spotify cat /proc/sys/net/ipv6/conf/all/disable_ipv6   # should print 1
+podman exec spotify getent ahosts accounts.spotify.com             # should be IPv4 only
+```
+
 ### Audio doesn't work
 
 Verify your host is actually running PipeWire and the socket exists:
