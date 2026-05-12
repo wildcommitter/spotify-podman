@@ -96,6 +96,16 @@ pkill -9 -f spotify
 podman rm -f spotify
 ```
 
+### Home, Search, or Browse views are blank
+
+Spotify's player UI is native, but Home/Search/Browse render in Chromium processes. Chromium's sandbox needs `CAP_SYS_ADMIN` or unprivileged user namespaces inside the container, which rootless Podman with `keep-id` doesn't provide — the renderers crash and those views show up blank while playback keeps working.
+
+The `spotify-wayland` wrapper in the `Containerfile` passes `--no-sandbox` to drop Chromium's internal sandbox. The container itself is still the security boundary. If you've modified the wrapper and lost this flag, restore it and rebuild:
+
+```bash
+podman build -t spotify .
+```
+
 ### Audio doesn't work
 
 Verify your host is actually running PipeWire and the socket exists:

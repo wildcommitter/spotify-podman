@@ -32,6 +32,7 @@ RUN printf '#!/bin/sh\n\
 exec /usr/bin/spotify \
 --enable-features=UseOzonePlatform,WaylandWindowDecorations \
 --ozone-platform=wayland \
+--no-sandbox \
 "$@"\n' > /usr/local/bin/spotify-wayland \
     && chmod +x /usr/local/bin/spotify-wayland
 
