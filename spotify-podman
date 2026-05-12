@@ -31,6 +31,9 @@ podman rm -f spotify 2>/dev/null || true
 exec podman run --rm -d \
     --name spotify \
     --userns="keep-id:uid=${UID_NUM},gid=${UID_NUM}" \
+    --network=pasta:--ipv4-only \
+    --sysctl net.ipv6.conf.all.disable_ipv6=1 \
+    --sysctl net.ipv6.conf.default.disable_ipv6=1 \
     --security-opt label=disable \
     -e "XDG_RUNTIME_DIR=/run/user/${UID_NUM}" \
     -e "WAYLAND_DISPLAY=${WAYLAND_DISPLAY}" \
